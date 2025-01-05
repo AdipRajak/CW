@@ -1,0 +1,108 @@
+﻿.transactions-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.transactions-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-section .form-row {
+    margin-bottom: 15px;
+}
+
+.form-row label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.btn-submit,
+.btn-add-tag {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+    .btn-submit:hover,
+    .btn-add-tag:hover {
+        background: #0056b3;
+    }
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+    .transactions-table th,
+    .transactions-table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+    }
+
+    .transactions-table th {
+        background: #007bff;
+        color: #fff;
+        text-align: left;
+    }
+
+    .transactions-table tr:nth-child(even) {
+        background: #f9f9f9;
+    }
+
+    .transactions-table tr:hover {
+        background: #e8f4ff;
+    }
+
+.balance-section {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f4f6f8;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+    .balance-section h2 {
+        font-size: 28px;
+        font-weight: bold;
+        color: #27ae60; /* Green color for positive balance */
+    }
+.btn-search, .btn-save-search {
+    margin-left: 10px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+    .btn-search:hover, .btn-save-search:hover {
+        background-color: #45a049;
+    }
+
+

@@ -1,0 +1,25 @@
+﻿.container {
+    padding: 20px;
+}
+
+.summary-section, .pending-debt-section, .top-transactions-section, .least-transactions-section, .total-transactions-section {
+    margin-top: 20px;
+}
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .transactions-table th, .transactions-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+
+h2, h3 {
+    margin-bottom: 10px;
+}
+
+.summary-row div {
+    margin-bottom: 10px;
+}

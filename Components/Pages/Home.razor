@@ -1,0 +1,153 @@
+﻿@page "/home"
+@using Blazored.LocalStorage
+@inject ILocalStorageService localStorage
+
+<div class="container home-container">
+    <!-- Available Balance -->
+    <div class="balance-section">
+        <h2>Available Balance: @availableBalance.ToString("C")</h2>
+    </div>
+
+    <!-- Total Inflow, Outflow, Debt, Debt Cleared -->
+    <div class="summary-section">
+        <h3>Transaction Summary</h3>
+        <div class="summary-row">
+            <div><strong>Total Inflow:</strong> @totalInflow.ToString("C")</div>
+            <div><strong>Total Outflow:</strong> @totalOutflow.ToString("C")</div>
+            <div><strong>Total Debt:</strong> @totalDebt.ToString("C")</div>
+            <div><strong>Total Debt Cleared:</strong> @totalDebtCleared.ToString("C")</div>
+            <div><strong>Pending Debt:</strong> @pendingDebt.ToString("C")</div>
+        </div>
+    </div>
+
+    <!-- Pending Debt (Borrow Transactions) -->
+    <div class="pending-debt-section">
+        <h3>Pending Debt (Borrow Transactions)</h3>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Amount</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in borrowTransactions)
+                {
+                    <tr>
+                        <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@transaction.Title</td>
+                        <td>@transaction.Amount.ToString("C")</td>
+                        <td>@transaction.Notes</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top 5 Transactions -->
+    <div class="top-transactions-section">
+        <h3>Top 5 Highest Transactions</h3>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in topTransactions)
+                {
+                    <tr>
+                        <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@transaction.Title</td>
+                        <td>@transaction.Amount.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top 5 Least Transactions -->
+    <div class="least-transactions-section">
+        <h3>Top 5 Least Transactions</h3>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in leastTransactions)
+                {
+                    <tr>
+                        <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                        <td>@transaction.Title</td>
+                        <td>@transaction.Amount.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Total Number of Transactions -->
+    <div class="total-transactions-section">
+        <h3>Total Number of Transactions: @totalTransactions</h3>
+    </div>
+</div>
+
+@code {
+    private List<Transaction> transactions = new();
+    private decimal availableBalance = 0;
+    private decimal totalInflow = 0;
+    private decimal totalOutflow = 0;
+    private decimal totalDebt = 0;
+    private decimal totalDebtCleared = 0;
+    private decimal pendingDebt = 0;
+    private int totalTransactions = 0;
+
+    private List<Transaction> borrowTransactions = new();
+    private List<Transaction> topTransactions = new();
+    private List<Transaction> leastTransactions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        transactions = await localStorage.GetItemAsync<List<Transaction>>("transactions") ?? new List<Transaction>();
+        CalculateTransactionSummary();
+    }
+
+    private void CalculateTransactionSummary()
+    {
+        totalInflow = transactions.Where(t => t.Type == "Credit").Sum(t => t.Amount);
+        totalOutflow = transactions.Where(t => t.Type == "Debit").Sum(t => t.Amount);
+        totalDebt = transactions.Where(t => t.Type == "Borrow").Sum(t => t.Amount);
+        totalDebtCleared = transactions.Where(t => t.Type == "Debt Cleared").Sum(t => t.Amount);
+        pendingDebt = totalDebt - totalDebtCleared;
+
+        availableBalance = totalInflow - totalOutflow;
+
+        // Get the list of "Borrow" type transactions
+        borrowTransactions = transactions.Where(t => t.Type == "Borrow").ToList();
+
+        // Get the top 5 transactions by amount
+        topTransactions = transactions.OrderByDescending(t => t.Amount).Take(5).ToList();
+
+        // Get the top 5 least transactions by amount
+        leastTransactions = transactions.OrderBy(t => t.Amount).Take(5).ToList();
+
+        totalTransactions = transactions.Count;
+    }
+
+    public class Transaction
+    {
+        public DateTime Date { get; set; }
+        public string Title { get; set; }
+        public string Type { get; set; }
+        public decimal Amount { get; set; }
+        public string Notes { get; set; }
+    }
+}

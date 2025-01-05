@@ -1,0 +1,147 @@
+﻿@page "/debts"
+@using Blazored.LocalStorage
+
+@inject ILocalStorageService localStorage
+
+<div class="container debts-container">
+    <!-- Available Balance Section -->
+    <div class="balance-section">
+        <h2>Available Balance: @availableBalance.ToString("C")</h2>
+    </div>
+
+    <div class="debts-title">Manage Debts</div>
+
+    <!-- Add Debt Form -->
+    <div class="form-section">
+        <h3>@(isAddingDebt ? "Add Debt" : "Add Payment")</h3>
+        <div class="form-row">
+            <label>Source</label>
+            <input @bind="newDebt.Source" placeholder="Enter source" />
+        </div>
+        <div class="form-row">
+            <label>Amount</label>
+            <input type="number" @bind="newDebt.Amount" placeholder="Enter amount" />
+        </div>
+        <div class="form-row">
+            <label>Due Date</label>
+            <input type="date" @bind="newDebt.DueDate" />
+        </div>
+        <div class="form-row">
+            <label>Notes</label>
+            <textarea @bind="newDebt.Notes" placeholder="Add any notes (optional)"></textarea>
+        </div>
+        <div class="form-row">
+            <label>Status</label>
+            <select @bind="newDebt.Status">
+                <option value="Pay">Pay</option>
+                <option value="Borrow">Borrow</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <button class="btn-submit" @onclick="AddDebt">Add Debt</button>
+            <button class="btn-reset" @onclick="ResetForm">Reset</button>
+        </div>
+    </div>
+
+    <!-- Debts Table -->
+    <table class="debts-table">
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (debts.Any())
+            {
+                foreach (var debt in debts)
+                {
+                    <tr>
+                        <td>@debt.Source</td>
+                        <td>@debt.Amount</td>
+                        <td>@debt.DueDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(debt.Status)</td>
+                        <td>
+                            @if (!debt.IsCleared)
+                            {
+                                <button class="btn btn-success" @onclick="() => ClearDebt(debt)">Clear</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" class="text-center">No debts to display.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Debt> debts = new();
+    private Debt newDebt = new Debt();
+    private bool isAddingDebt = true; // Toggle between Pay and Borrow form
+    private decimal availableBalance;
+
+    protected override async Task OnInitializedAsync()
+    {
+        debts = await localStorage.GetItemAsync<List<Debt>>("debts") ?? new List<Debt>();
+        await localStorage.SetItemAsync("debts", debts);
+
+        // Calculate the initial available balance
+        CalculateAvailableBalance();
+    }
+
+    private async Task AddDebt()
+    {
+        debts.Add(newDebt);
+        await localStorage.SetItemAsync("debts", debts);
+
+        // Recalculate available balance after adding new debt
+        CalculateAvailableBalance();
+
+        ResetForm();
+    }
+
+    private void ClearDebt(Debt debt)
+    {
+        debt.IsCleared = true;
+        localStorage.SetItemAsync("debts", debts);
+
+        // Recalculate available balance after clearing a debt
+        CalculateAvailableBalance();
+    }
+
+    private void ResetForm()
+    {
+        newDebt = new Debt();
+        isAddingDebt = true; // Reset form to "Add Debt"
+    }
+
+    private void CalculateAvailableBalance()
+    {
+        // Calculate available balance as total debts that are 'Borrow' minus the ones that are 'Pay'
+        availableBalance = debts
+            .Where(d => d.Status == "Borrow" && !d.IsCleared)
+            .Sum(d => d.Amount) -
+            debts
+            .Where(d => d.Status == "Pay" && !d.IsCleared)
+            .Sum(d => d.Amount);
+    }
+
+    public class Debt
+    {
+        public string Source { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime DueDate { get; set; }
+        public bool IsCleared { get; set; } = false;
+        public string Notes { get; set; }
+        public string Status { get; set; } = "Pay"; // Either "Pay" or "Borrow"
+    }
+}

@@ -1,0 +1,260 @@
+﻿@page "/transactions"
+@using Blazored.LocalStorage
+@inject ILocalStorageService localStorage
+@inject IJSRuntime JSRuntime
+
+<div class="container transactions-container">
+    <!-- Available Balance -->
+    <div class="balance-section">
+        <h2>Available Balance: @availableBalance.ToString("C")</h2>
+    </div>
+
+    <!-- Search Section (Just below Available Balance) -->
+    <div class="search-section">
+        <input type="text" @bind="searchTitle" placeholder="Search by Title" @oninput="ApplyFilters" />
+        <button class="btn-search" @onclick="ApplyFilters">Search</button>
+    </div>
+
+    <div class="transactions-title">Manage Transactions</div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h3>Filter Transactions</h3>
+        <div class="form-row">
+            <label>Type</label>
+            <select @bind="filterType">
+                <option value="">All</option>
+                <option value="Credit">Inflow (Credit)</option>
+                <option value="Debit">Outflow (Debit)</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Tag</label>
+            <select @bind="filterTag">
+                <option value="">All</option>
+                @foreach (var tag in predefinedTags)
+                {
+                    <option value="@tag">@tag</option>
+                }
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Date Range</label>
+            <input type="date" @bind="filterStartDate" />
+            <span>to</span>
+            <input type="date" @bind="filterEndDate" />
+        </div>
+        <div class="form-row">
+            <button class="btn-filter" @onclick="ApplyFilters">Apply Filters</button>
+            <button class="btn-reset" @onclick="ResetFilters">Reset Filters</button>
+        </div>
+    </div>
+
+    <!-- Add Transaction Form -->
+    <div class="form-section">
+        <div class="form-row">
+            <label>Title</label>
+            <input @bind="newTransaction.Title" placeholder="Enter title" />
+        </div>
+        <div class="form-row">
+            <label>Amount</label>
+            <input type="number" @bind="newTransaction.Amount" placeholder="Enter amount" />
+        </div>
+        <div class="form-row">
+            <label>Type</label>
+            <select @bind="newTransaction.Type">
+                <option value="Credit">Inflow (Credit)</option>
+                <option value="Debit">Outflow (Debit)</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Date</label>
+            <input type="date" @bind="newTransaction.Date" />
+        </div>
+        <div class="form-row">
+            <label>Tags</label>
+            <select @bind="selectedTag">
+                @foreach (var tag in predefinedTags)
+                {
+                    <option value="@tag">@tag</option>
+                }
+            </select>
+            <button class="btn-add-tag" @onclick="AddTag">Add Tag</button>
+            <input placeholder="Custom tag" @bind="customTag" />
+        </div>
+        <div class="form-row">
+            <label>Notes</label>
+            <textarea @bind="newTransaction.Notes" placeholder="Add notes (optional)"></textarea>
+        </div>
+        <div class="form-row">
+            <button class="btn-submit" @onclick="AddTransaction">Add Transaction</button>
+        </div>
+    </div>
+
+    <!-- Sorting Options -->
+    <div class="sort-section">
+        <button @onclick="SortTransactionsAscending">Sort by Date (Ascending)</button>
+        <button @onclick="SortTransactionsDescending">Sort by Date (Descending)</button>
+    </div>
+
+    <!-- Transactions List -->
+    <div class="transactions-list">
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Tags</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (filteredTransactions.Any())
+                {
+                    @foreach (var transaction in filteredTransactions)
+                    {
+                        <tr>
+                            <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@transaction.Title</td>
+                            <td>@transaction.Type</td>
+                            <td>@transaction.Amount</td>
+                            <td>@string.Join(", ", transaction.Tags)</td>
+                            <td>@transaction.Notes</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">No transactions to display.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Transaction> transactions = new();
+    private List<Transaction> filteredTransactions = new(); // For displaying filtered results
+    private Transaction newTransaction = new Transaction
+        {
+            Date = DateTime.Now,
+            Tags = new List<string>()
+        };
+    private string selectedTag;
+    private string customTag;
+    private decimal availableBalance = 0;
+
+    // Filter parameters
+    private string filterType = "";
+    private string filterTag = "";
+    private DateTime? filterStartDate = null;
+    private DateTime? filterEndDate = null;
+    private string searchTitle = ""; // To store the search input
+
+    private List<string> predefinedTags = new() { "Rent", "Salary", "Groceries", "Utilities" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        transactions = await localStorage.GetItemAsync<List<Transaction>>("transactions") ?? new List<Transaction>();
+        filteredTransactions = new List<Transaction>(transactions);
+        CalculateBalance();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredTransactions = transactions
+            .Where(t => string.IsNullOrEmpty(filterType) || t.Type == filterType)
+            .Where(t => string.IsNullOrEmpty(filterTag) || t.Tags.Contains(filterTag))
+            .Where(t => !filterStartDate.HasValue || t.Date >= filterStartDate.Value)
+            .Where(t => !filterEndDate.HasValue || t.Date <= filterEndDate.Value)
+            .Where(t => string.IsNullOrEmpty(searchTitle) || t.Title.Contains(searchTitle, StringComparison.OrdinalIgnoreCase)) // Apply title search
+            .ToList();
+    }
+
+    private void ResetFilters()
+    {
+        filterType = "";
+        filterTag = "";
+        filterStartDate = null;
+        filterEndDate = null;
+        searchTitle = ""; // Reset search field
+        filteredTransactions = new List<Transaction>(transactions);
+    }
+
+    private async Task AddTransaction()
+    {
+        if (newTransaction.Type == "Debit" && newTransaction.Amount > availableBalance)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Insufficient balance. Cannot proceed with this transaction.");
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(customTag))
+        {
+            newTransaction.Tags.Add(customTag);
+            customTag = string.Empty;
+        }
+
+        transactions.Add(newTransaction);
+        filteredTransactions.Add(newTransaction);
+
+        if (newTransaction.Type == "Credit")
+        {
+            availableBalance += newTransaction.Amount;
+        }
+        else if (newTransaction.Type == "Debit")
+        {
+            availableBalance -= newTransaction.Amount;
+        }
+
+        await localStorage.SetItemAsync("transactions", transactions);
+
+        newTransaction = new Transaction
+            {
+                Date = DateTime.Now,
+                Tags = new List<string>()
+            };
+    }
+
+    private void AddTag()
+    {
+        if (!string.IsNullOrEmpty(selectedTag) && !newTransaction.Tags.Contains(selectedTag))
+        {
+            newTransaction.Tags.Add(selectedTag);
+        }
+    }
+
+    private void CalculateBalance()
+    {
+        availableBalance = transactions
+            .Where(t => t.Type == "Credit")
+            .Sum(t => t.Amount) -
+            transactions
+            .Where(t => t.Type == "Debit")
+            .Sum(t => t.Amount);
+    }
+
+    private void SortTransactionsAscending()
+    {
+        filteredTransactions = filteredTransactions.OrderBy(t => t.Date).ToList();
+    }
+
+    private void SortTransactionsDescending()
+    {
+        filteredTransactions = filteredTransactions.OrderByDescending(t => t.Date).ToList();
+    }
+
+    public class Transaction
+    {
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string Title { get; set; }
+        public string Type { get; set; } = "Credit";
+        public decimal Amount { get; set; }
+        public List<string> Tags { get; set; } = new();
+        public string Notes { get; set; }
+    }
+}
