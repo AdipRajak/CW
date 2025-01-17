@@ -258,3 +258,19 @@
         public string Notes { get; set; }
     }
 }
+@page "/transactions"
+@inject ILocalStorageService localStorage
+@inject NavigationManager Navigation
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var isLoggedIn = await localStorage.GetItemAsync<bool>("isLoggedIn");
+
+        if (!isLoggedIn)
+        {
+            // If not logged in, redirect to login page
+            Navigation.NavigateTo("/login");
+        }
+    }
+}

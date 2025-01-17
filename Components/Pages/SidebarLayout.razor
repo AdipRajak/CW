@@ -1,0 +1,27 @@
+﻿@inherits LayoutComponentBase
+@inject ILocalStorageService localStorage
+@inject NavigationManager Navigation
+
+<div class="sidebar">
+    @if (await localStorage.GetItemAsync<bool>("isLoggedIn"))
+    {
+        <a href="/transactions">Transactions</a>
+        <a href="/debts">Debts</a>
+        <button @onclick="Logout">Logout</button>
+    }
+    else
+    {
+        <a href="/login">Login</a>
+        <a href="/signup">Sign Up</a>
+    }
+</div>
+
+@Body
+
+@code {
+    private async Task Logout()
+    {
+        await localStorage.RemoveItemAsync("isLoggedIn");
+        Navigation.NavigateTo("/login"); // Redirect to login page after logout
+    }
+}

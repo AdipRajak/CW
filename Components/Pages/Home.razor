@@ -3,6 +3,20 @@
 @inject ILocalStorageService localStorage
 
 <div class="container home-container">
+    <!-- Date Range Filter -->
+    <div class="date-range-filter-section">
+        <h3>Filter by Date Range</h3>
+        <div>
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" @bind="startDate" />
+        </div>
+        <div>
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate" @bind="endDate" />
+        </div>
+        <button @onclick="ApplyDateFilter">Apply Filter</button>
+    </div>
+
     <!-- Available Balance -->
     <div class="balance-section">
         <h2>Available Balance: @availableBalance.ToString("C")</h2>
@@ -20,6 +34,17 @@
         </div>
     </div>
 
+    <!-- Highest/Lowest Inflow, Outflow, and Debt -->
+    <div class="highest-lowest-transactions-section">
+        <h3>Highest and Lowest Transactions</h3>
+        <div><strong>Highest Inflow:</strong> @highestInflow?.Amount.ToString("C") (Date: @highestInflow?.Date.ToString("yyyy-MM-dd"))</div>
+        <div><strong>Lowest Inflow:</strong> @lowestInflow?.Amount.ToString("C") (Date: @lowestInflow?.Date.ToString("yyyy-MM-dd"))</div>
+        <div><strong>Highest Outflow:</strong> @highestOutflow?.Amount.ToString("C") (Date: @highestOutflow?.Date.ToString("yyyy-MM-dd"))</div>
+        <div><strong>Lowest Outflow:</strong> @lowestOutflow?.Amount.ToString("C") (Date: @lowestOutflow?.Date.ToString("yyyy-MM-dd"))</div>
+        <div><strong>Highest Debt:</strong> @highestDebt?.Amount.ToString("C") (Date: @highestDebt?.Date.ToString("yyyy-MM-dd"))</div>
+        <div><strong>Lowest Debt:</strong> @lowestDebt?.Amount.ToString("C") (Date: @lowestDebt?.Date.ToString("yyyy-MM-dd"))</div>
+    </div>
+
     <!-- Pending Debt (Borrow Transactions) -->
     <div class="pending-debt-section">
         <h3>Pending Debt (Borrow Transactions)</h3>
@@ -33,7 +58,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var transaction in borrowTransactions)
+                @foreach (var transaction in pendingDebtTransactions)
                 {
                     <tr>
                         <td>@transaction.Date.ToString("yyyy-MM-dd")</td>
@@ -114,9 +139,47 @@
     private List<Transaction> topTransactions = new();
     private List<Transaction> leastTransactions = new();
 
+    // Added property for pending debts
+    private List<Transaction> pendingDebtTransactions = new();
+
+    // Added properties for highest/lowest transactions
+    private Transaction highestInflow;
+    private Transaction lowestInflow;
+    private Transaction highestOutflow;
+    private Transaction lowestOutflow;
+    private Transaction highestDebt;
+    private Transaction lowestDebt;
+
+    // Date range filtering
+    private DateTime? startDate;
+    private DateTime? endDate;
+
     protected override async Task OnInitializedAsync()
     {
         transactions = await localStorage.GetItemAsync<List<Transaction>>("transactions") ?? new List<Transaction>();
+        ApplyDateFilter();  // Apply date filter on initial load
+    }
+
+    private void ApplyDateFilter()
+    {
+        var filteredTransactions = transactions;
+
+        // Apply start date filter
+        if (startDate.HasValue)
+        {
+            filteredTransactions = filteredTransactions.Where(t => t.Date >= startDate.Value).ToList();
+        }
+
+        // Apply end date filter
+        if (endDate.HasValue)
+        {
+            filteredTransactions = filteredTransactions.Where(t => t.Date <= endDate.Value).ToList();
+        }
+
+        // Update the filtered transaction list
+        transactions = filteredTransactions;
+
+        // Recalculate the summary after filtering
         CalculateTransactionSummary();
     }
 
@@ -133,11 +196,24 @@
         // Get the list of "Borrow" type transactions
         borrowTransactions = transactions.Where(t => t.Type == "Borrow").ToList();
 
+        // Get the list of pending debts (borrow transactions that have not been cleared)
+        pendingDebtTransactions = borrowTransactions.Where(t => t.Amount > 0 && t.Amount > t.AmountCleared).ToList();
+
         // Get the top 5 transactions by amount
         topTransactions = transactions.OrderByDescending(t => t.Amount).Take(5).ToList();
 
         // Get the top 5 least transactions by amount
         leastTransactions = transactions.OrderBy(t => t.Amount).Take(5).ToList();
+
+        // Set highest and lowest inflows, outflows, and debts
+        highestInflow = transactions.Where(t => t.Type == "Credit").OrderByDescending(t => t.Amount).FirstOrDefault();
+        lowestInflow = transactions.Where(t => t.Type == "Credit").OrderBy(t => t.Amount).FirstOrDefault();
+
+        highestOutflow = transactions.Where(t => t.Type == "Debit").OrderByDescending(t => t.Amount).FirstOrDefault();
+        lowestOutflow = transactions.Where(t => t.Type == "Debit").OrderBy(t => t.Amount).FirstOrDefault();
+
+        highestDebt = transactions.Where(t => t.Type == "Borrow").OrderByDescending(t => t.Amount).FirstOrDefault();
+        lowestDebt = transactions.Where(t => t.Type == "Borrow").OrderBy(t => t.Amount).FirstOrDefault();
 
         totalTransactions = transactions.Count;
     }
@@ -148,6 +224,7 @@
         public string Title { get; set; }
         public string Type { get; set; }
         public decimal Amount { get; set; }
+        public decimal AmountCleared { get; set; } // Added field for tracking amount cleared
         public string Notes { get; set; }
     }
 }

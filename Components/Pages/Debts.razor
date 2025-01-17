@@ -1,6 +1,5 @@
 ﻿@page "/debts"
 @using Blazored.LocalStorage
-
 @inject ILocalStorageService localStorage
 
 <div class="container debts-container">
@@ -83,7 +82,8 @@
     </table>
 </div>
 
-@code {
+@code 
+{
     private List<Debt> debts = new();
     private Debt newDebt = new Debt();
     private bool isAddingDebt = true; // Toggle between Pay and Borrow form
@@ -100,17 +100,20 @@
 
     private async Task AddDebt()
     {
+        // Add new debt/payment to the list
         debts.Add(newDebt);
         await localStorage.SetItemAsync("debts", debts);
 
-        // Recalculate available balance after adding new debt
+        // Recalculate available balance after adding new debt/payment
         CalculateAvailableBalance();
 
+        // Reset the form
         ResetForm();
     }
 
     private void ClearDebt(Debt debt)
     {
+        // Mark the debt as cleared
         debt.IsCleared = true;
         localStorage.SetItemAsync("debts", debts);
 
@@ -129,7 +132,7 @@
         // Calculate available balance as total debts that are 'Borrow' minus the ones that are 'Pay'
         availableBalance = debts
             .Where(d => d.Status == "Borrow" && !d.IsCleared)
-            .Sum(d => d.Amount) -
+            .Sum(d => d.Amount) - 
             debts
             .Where(d => d.Status == "Pay" && !d.IsCleared)
             .Sum(d => d.Amount);
